@@ -43,11 +43,19 @@ print("📦 Modello Paint scaricato in:", local_dir)
 pipeline = Hunyuan3DPaintPipeline.from_pretrained(local_dir)
 
 # Carica la mesh salvata (es. generata da DiTFlowMatching)
+
+if not os.path.exists(mesh_path):
+    raise FileNotFoundError(f"⚠️ Mesh non trovata: {mesh_path}")
+
 mesh_path = input("Inserisci il percorso della mesh (.ply): ").strip()
 mesh = trimesh.load(mesh_path)
 print("✅ Mesh caricata:", mesh_path)
 
 # Carica immagine da usare come texture
+
+if not os.path.exists(image_path):
+    raise FileNotFoundError(f"⚠️ Immagine non trovata: {image_path}")
+
 image_path = input("Inserisci il percorso dell'immagine da usare come texture (.png/.jpg): ").strip()
 print("🖼️ Immagine caricata:", image_path)
 

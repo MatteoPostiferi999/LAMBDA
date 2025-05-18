@@ -10,8 +10,7 @@ os.chdir("Hunyuan3D-2GP")
 # 2. Installa PyTorch compatibile (modifica versione se necessario)
 subprocess.run([
     sys.executable, "-m", "pip", "install",
-    "torch==2.5.1+cu124", "torchvision", "torchaudio",
-    "--index-url", "https://download.pytorch.org/whl/test/cu124"
+    "torch==2.5.1+cu124", "torchvision", "torchaudio"
 ])
 
 # 3. Installa le altre dipendenze

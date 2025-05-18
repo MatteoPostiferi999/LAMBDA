@@ -5,6 +5,8 @@ import subprocess
 from huggingface_hub import snapshot_download
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
 import trimesh
+from PIL import Image
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -62,10 +64,13 @@ pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
 # Carica immagine da path locale (richiesto all'utente)
 image_path = input("Inserisci il percorso dell'immagine (es. demo.png): ").strip()
 
+image = Image.open(image_path).convert("RGB")
+
+
 # Genera mesh
 with torch.no_grad():
     mesh = pipeline(
-        image=image_path,
+        image=image,
         target_face_number=20000,
         inference_steps=20,
         seed=42,
