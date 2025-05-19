@@ -64,6 +64,10 @@ pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
 # Carica immagine da path locale (richiesto all'utente)
 image_path = input("Inserisci il percorso dell'immagine (es. demo.png): ").strip()
 
+if not os.path.exists(image_path):
+    raise FileNotFoundError(f"❌ Immagine non trovata: {image_path}")
+
+
 image = Image.open(image_path).convert("RGB")
 
 
