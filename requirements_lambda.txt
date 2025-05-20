@@ -1,0 +1,37 @@
+# Array & core tools
+numpy==1.26.4
+Pillow
+einops
+omegaconf
+accelerate
+onnxruntime
+
+# Transformers & AI
+transformers==4.49.0
+
+# 3D & Image processing
+trimesh
+open3d
+pymeshlab
+rembg
+
+# Mesh and graphics utils
+pygltflib
+xatlas
+
+# Web interface (optional)
+gradio
+uvicorn
+fastapi
+
+# Custom and compiled modules
+ninja
+pybind11
+
+# Internal or custom library (used by Hunyuan3D)
+mmgp==3.2.7
+
+# Validation and config
+pydantic==2.10.6
+
+

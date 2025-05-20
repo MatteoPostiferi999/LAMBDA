@@ -61,27 +61,46 @@ pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
     local_files_only=True
 )
 
-# Carica immagine da path locale (richiesto all'utente)
-image_path = input("Inserisci il percorso dell'immagine (es. demo.png): ").strip()
 
-if not os.path.exists(image_path):
-    raise FileNotFoundError(f"❌ Immagine non trovata: {image_path}")
+# Determina se il modello selezionato è multiview
+is_multiview = 'mv' in subfolder.lower()
 
+if is_multiview:
+    print("🔄 Modello multiview selezionato. Fornisci le immagini per le viste disponibili.")
+    image_dict = {}
+    for view in ['front', 'left', 'right', 'back']:
+        path = input(f"Inserisci il percorso dell'immagine per la vista '{view}' (lascia vuoto per saltare): ").strip()
+        if path:
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"❌ Immagine non trovata: {path}")
+            image_dict[view] = Image.open(path).convert("RGB")
+    if not image_dict:
+        raise ValueError("❌ Nessuna immagine fornita per il modello multiview.")
+    image_input = image_dict
+else:
+    image_path = input("Inserisci il percorso dell'immagine (es. demo.png): ").strip()
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f"❌ Immagine non trovata: {image_path}")
+    image_input = Image.open(image_path).convert("RGB")
 
-image = Image.open(image_path).convert("RGB")
 
 
 # Genera mesh
 with torch.no_grad():
     mesh = pipeline(
-        image=image,
-        target_face_number=20000,
-        inference_steps=20,
+        image=image_input,
+        target_face_number=40000,
+        inference_steps=42,
         seed=42,
-        octree_resolution=128
+        octree_resolution=256
     )[0]
 
 # Esporta la mesh
-output_path = 'output_custom.ply'
+output_path = "output/output_custom.ply"
+
+# Assicurati che esista la directory di output
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+# Esporta la mesh
 mesh.export(output_path)
 print(f"✅ Mesh generata e salvata in: {output_path}")
