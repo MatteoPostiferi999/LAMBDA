@@ -1,83 +1,104 @@
 import os
-import subprocess
 import sys
+import subprocess
+import logging
 
-# Configurazione
+logging.basicConfig(level=logging.INFO)
+
 REPO_URL = "https://github.com/deepbeepmeep/Hunyuan3D-2GP.git"
-REPO_DIR = "Hunyuan3D-2GP"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "Hunyuan3D-2GP"))
 REQUIREMENTS_FILE = "requirements_lambda.txt"
 
+
 def run_installation(cmd, use_user_flag=False):
-    """Esegue un comando di installazione con gestione errori e opzione --user"""
+    """Esegue un comando pip con gestione errori e flag --user se necessario."""
     try:
         if use_user_flag:
-            cmd = cmd + ["--user"]
-            print(f"⚠️ Riprovando con flag --user: {' '.join(cmd)}")
+            cmd += ["--user"]
+            logging.warning(f"Riprovo con flag --user: {' '.join(cmd)}")
         else:
-            print(f"🔄 Esecuzione: {' '.join(cmd)}")
-        
+            logging.info(f"Esecuzione: {' '.join(cmd)}")
         subprocess.check_call(cmd)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Errore durante '{' '.join(cmd)}': {e}")
+        logging.error(f"Errore durante: {' '.join(cmd)}\n{e}")
         if not use_user_flag:
-            print("Riproverò con il flag --user...")
             return run_installation(cmd, use_user_flag=True)
         return False
 
-# 1. Clona il repository se non esiste
-if not os.path.exists(REPO_DIR):
-    print(f"📥 Clonazione repository {REPO_URL}...")
-    try:
-        subprocess.check_call(["git", "clone", REPO_URL])
-        print("✅ Repository clonato con successo")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Errore durante il clone del repository: {e}")
-        sys.exit(1)
 
-# 2. Vai nella cartella del progetto
-print(f"📂 Cambio directory a {REPO_DIR}")
-os.chdir(REPO_DIR)
+def clone_repository():
+    """Clona il repository se non già presente."""
+    if not os.path.exists(REPO_DIR):
+        logging.info(f"📥 Clonazione repository {REPO_URL}...")
+        subprocess.run(["git", "clone", REPO_URL, REPO_DIR], check=True)
+        logging.info("✅ Repository clonato.")
+    else:
+        logging.info("✅ Repository già presente.")
 
-# 3. Installa torch e torchvision compatibili con CUDA 12.4
-print("🔄 Installazione PyTorch con supporto CUDA 12.4...")
-torch_cmd = [
-    sys.executable, "-m", "pip", "install",
-    "torch==2.5.1",
-    "torchvision==0.18.1",
-    "--index-url", "https://download.pytorch.org/whl/test/cu124"
-]
 
-if not run_installation(torch_cmd):
-    print("❌ Installazione PyTorch fallita sia con che senza --user")
-    sys.exit(1)
+def install_editable():
+    """Installa il repository Hunyuan in modalità editable."""
+    logging.info("🔧 Installazione in modalità editable...")
+    subprocess.run(["pip", "install", "-e", ".", "--user"], cwd=REPO_DIR, check=True)
+    logging.info("✅ Installazione editable completata.")
 
-# 4. Installa tutte le altre dipendenze dal file custom
-print(f"🔄 Installazione dipendenze da {REQUIREMENTS_FILE}...")
-if not os.path.exists(REQUIREMENTS_FILE):
-    print(f"⚠️ File {REQUIREMENTS_FILE} non trovato, creazione file minimo...")
-    with open(REQUIREMENTS_FILE, "w") as f:
-        f.write("diffusers\nhuggingface_hub\naccelerators\ntransformers\nscipy\n")
 
-requirements_cmd = [
-    sys.executable, "-m", "pip", "install",
-    "-r", REQUIREMENTS_FILE
-]
-
-if not run_installation(requirements_cmd):
-    print(f"❌ Installazione dipendenze da {REQUIREMENTS_FILE} fallita")
-    sys.exit(1)
-
-# 5. Verifica installazione
-print("🔍 Verifica installazione PyTorch con CUDA...")
-try:
-    check_cmd = [
-        sys.executable, "-c", 
-        "import torch; print(f'PyTorch {torch.__version__}, CUDA disponible: {torch.cuda.is_available()}, ' + (f'Versione CUDA: {torch.version.cuda}' if torch.cuda.is_available() else 'CUDA non disponibile'))"
+def install_pytorch():
+    """Installa PyTorch e torchvision compatibili con CUDA 12.4."""
+    logging.info("🔄 Installazione PyTorch con CUDA 12.4...")
+    torch_cmd = [
+        sys.executable, "-m", "pip", "install",
+        "torch==2.5.1",
+        "torchvision==0.18.1",
+        "--index-url", "https://download.pytorch.org/whl/test/cu124"
     ]
-    subprocess.check_call(check_cmd)
-except subprocess.CalledProcessError:
-    print("⚠️ Impossibile verificare l'installazione di PyTorch")
+    if not run_installation(torch_cmd):
+        sys.exit("❌ Installazione PyTorch fallita.")
 
-# 6. Fine
-print("✅ Setup completato con successo.")
+
+def install_requirements():
+    """Installa le dipendenze da requirements_lambda.txt, creandolo se non esiste."""
+    requirements_path = os.path.join(BASE_DIR, REQUIREMENTS_FILE)
+    if not os.path.exists(requirements_path):
+        logging.warning(f"{REQUIREMENTS_FILE} non trovato. Creo un file minimo...")
+        with open(requirements_path, "w") as f:
+            f.write("diffusers\nhuggingface_hub\naccelerators\ntransformers\nscipy\n")
+
+    logging.info(f"📦 Installazione dipendenze da {REQUIREMENTS_FILE}...")
+    requirements_cmd = [
+        sys.executable, "-m", "pip", "install", "-r", requirements_path
+    ]
+    if not run_installation(requirements_cmd):
+        sys.exit("❌ Installazione dipendenze fallita.")
+
+
+def check_pytorch_cuda():
+    """Verifica che PyTorch sia installato e che la GPU CUDA sia visibile."""
+    logging.info("🔍 Verifica installazione PyTorch e disponibilità CUDA...")
+    try:
+        subprocess.check_call([
+            sys.executable, "-c",
+            (
+                "import torch; "
+                "print(f'✅ PyTorch {torch.__version__} | CUDA disponibile: {torch.cuda.is_available()}"
+                f"{' | Versione CUDA: ' + torch.version.cuda if torch.cuda.is_available() else ''}')"
+            )
+        ])
+    except subprocess.CalledProcessError:
+        logging.warning("⚠️  Verifica PyTorch fallita.")
+
+
+def full_setup():
+    """Esegue il setup completo: clone repo, install editable, PyTorch e requirements."""
+    clone_repository()
+    install_editable()
+    install_pytorch()
+    install_requirements()
+    check_pytorch_cuda()
+    logging.info("✅ Setup completato con successo.")
+
+
+if __name__ == "__main__":
+    full_setup()
